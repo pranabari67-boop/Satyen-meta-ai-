@@ -1,0 +1,6 @@
+{
+  "name": "Satyen Meta AI",
+  "description": "Your Complete Life. One Intelligent Assistant. Multilingual Bengali & English AI life management for personal memory, notes, reminders, tasks, and accounting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

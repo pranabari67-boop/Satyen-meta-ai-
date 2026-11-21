@@ -1,0 +1,382 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 160)) &&
+             data.preferredLanguage in ['en', 'bn'] &&
+             data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 5 &&
+             data.themeMode in ['SYSTEM', 'LIGHT', 'DARK'] &&
+             data.monthlyBudgetMinor is int && data.monthlyBudgetMinor >= 0 &&
+             data.biometricLockEnabled is bool &&
+             data.subscriptionTier in ['FREE', 'PREMIUM'];
+    }
+
+    function isValidMemory(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.content is string && data.content.size() <= 8000 &&
+             data.category in ['PERSONAL', 'WORK', 'FINANCE', 'HEALTH', 'IDEA', 'VOICE', 'DOCUMENT'] &&
+             data.tags is list && data.tags.size() <= 10 && (data.tags.size() == 0 || data.tags[0] is string) &&
+             data.pinned is bool &&
+             data.sourceType in ['NOTE', 'MEMORY', 'VOICE', 'DOCUMENT'] &&
+             (!('attachmentUri' in data) || (data.attachmentUri is string && data.attachmentUri.size() <= 500)) &&
+             (!('eventDateMillis' in data) || (data.eventDateMillis is int && data.eventDateMillis >= 0));
+    }
+
+    function isValidReminder(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             data.triggerAtMillis is int && data.triggerAtMillis > 0 &&
+             data.timezoneId is string && data.timezoneId.size() >= 1 && data.timezoneId.size() <= 64 &&
+             data.recurrence in ['ONCE', 'DAILY', 'WEEKLY', 'MONTHLY'] &&
+             data.status in ['PENDING', 'COMPLETED', 'SNOOZED', 'MISSED'] &&
+             (!('snoozedUntilMillis' in data) || (data.snoozedUntilMillis is int && data.snoozedUntilMillis > 0)) &&
+             data.deliveryStatus in ['SCHEDULED', 'DELIVERED', 'PERMISSION_DENIED', 'SKIPPED'];
+    }
+
+    function isValidTask(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             data.priority in ['LOW', 'MEDIUM', 'HIGH'] &&
+             data.completed is bool &&
+             (!('dueAtMillis' in data) || (data.dueAtMillis is int && data.dueAtMillis >= 0));
+    }
+
+    function isValidAccount(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.accountType in ['CASH', 'BANK', 'WALLET', 'CARD'] &&
+             data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 5 &&
+             data.balanceMinor is int;
+    }
+
+    function isValidTransaction(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.accountId is string && data.accountId.size() >= 1 && data.accountId.size() <= 128 &&
+             data.type in ['INCOME', 'EXPENSE', 'REVERSAL'] &&
+             data.amountMinor is int && data.amountMinor > 0 && data.amountMinor <= 100000000000 &&
+             data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 5 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 300 &&
+             data.occurredAtMillis is int && data.occurredAtMillis > 0 &&
+             (!('reversedTransactionId' in data) || (data.reversedTransactionId is string && data.reversedTransactionId.size() >= 1 && data.reversedTransactionId.size() <= 128));
+    }
+
+    function isValidDebt(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.counterparty is string && data.counterparty.size() >= 1 && data.counterparty.size() <= 100 &&
+             data.direction in ['RECEIVABLE', 'PAYABLE'] &&
+             data.principalMinor is int && data.principalMinor > 0 && data.principalMinor <= 100000000000 &&
+             data.remainingMinor is int && data.remainingMinor >= 0 && data.remainingMinor <= data.principalMinor &&
+             data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 5 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+             (!('dueAtMillis' in data) || (data.dueAtMillis is int && data.dueAtMillis > 0)) &&
+             data.status in ['OPEN', 'SETTLED'];
+    }
+
+    function isValidDebtPayment(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.debtId is string && data.debtId.size() >= 1 && data.debtId.size() <= 128 &&
+             data.amountMinor is int && data.amountMinor > 0 && data.amountMinor <= 100000000000 &&
+             data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 5 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 200)) &&
+             data.paidAtMillis is int && data.paidAtMillis > 0;
+    }
+
+    function isValidAiMessage(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.sender in ['USER', 'ASSISTANT'] &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 8000 &&
+             data.actionStatus in ['NONE', 'PENDING_CONFIRMATION', 'CONFIRMED', 'CANCELLED'] &&
+             (!('intent' in data) || (data.intent is string && data.intent.size() <= 64)) &&
+             (!('actionSummary' in data) || (data.actionSummary is string && data.actionSummary.size() <= 500)) &&
+             (!('actionPayloadJson' in data) || (data.actionPayloadJson is string && data.actionPayloadJson.size() <= 4000));
+    }
+
+    function isValidAuditLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.action is string && data.action.size() >= 1 && data.action.size() <= 64 &&
+             data.entityType is string && data.entityType.size() >= 1 && data.entityType.size() <= 64 &&
+             data.entityId is string && data.entityId.size() >= 1 && data.entityId.size() <= 128 &&
+             data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 500;
+    }
+
+    function isValidSupportTicket(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 120 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 2000 &&
+             data.status in ['OPEN', 'RESOLVED'];
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'preferredLanguage', 'currency', 'themeMode', 'monthlyBudgetMinor', 'biometricLockEnabled', 'subscriptionTier', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'preferredLanguage', 'currency', 'themeMode', 'monthlyBudgetMinor', 'biometricLockEnabled', 'subscriptionTier', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'preferredLanguage', 'currency', 'themeMode', 'monthlyBudgetMinor', 'biometricLockEnabled', 'subscriptionTier', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /memories/{memoryId} {
+        allow get: if isOwner(userId) && isValidId(memoryId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(memoryId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'content', 'category', 'tags', 'pinned', 'sourceType', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'content', 'category', 'tags', 'pinned', 'sourceType', 'attachmentUri', 'eventDateMillis', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidMemory(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(memoryId) &&
+                         isValidMemory(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'pinned', 'sourceType', 'attachmentUri', 'eventDateMillis', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(memoryId);
+      }
+
+      match /reminders/{reminderId} {
+        allow get: if isOwner(userId) && isValidId(reminderId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'triggerAtMillis', 'timezoneId', 'recurrence', 'status', 'deliveryStatus', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'notes', 'triggerAtMillis', 'timezoneId', 'recurrence', 'status', 'snoozedUntilMillis', 'deliveryStatus', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidReminder(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         isValidReminder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'notes', 'triggerAtMillis', 'timezoneId', 'recurrence', 'status', 'snoozedUntilMillis', 'deliveryStatus', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(reminderId);
+      }
+
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId) && isValidId(taskId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(taskId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'priority', 'completed', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'notes', 'priority', 'completed', 'dueAtMillis', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidTask(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(taskId) &&
+                         isValidTask(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'notes', 'priority', 'completed', 'dueAtMillis', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      match /accounts/{accountId} {
+        allow get: if isOwner(userId) && isValidId(accountId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(accountId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'accountType', 'currency', 'balanceMinor', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'accountType', 'currency', 'balanceMinor', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidAccount(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(accountId) &&
+                         isValidAccount(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'accountType', 'currency', 'balanceMinor', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(accountId);
+      }
+
+      match /transactions/{transactionId} {
+        allow get: if isOwner(userId) && isValidId(transactionId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(transactionId) &&
+                         incoming().keys().hasAll(['userId', 'accountId', 'type', 'amountMinor', 'currency', 'category', 'description', 'occurredAtMillis', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'accountId', 'type', 'amountMinor', 'currency', 'category', 'description', 'occurredAtMillis', 'reversedTransactionId', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidTransaction(incoming(), userId) &&
+                         exists(/databases/$(database)/documents/users/$(userId)/accounts/$(incoming().accountId));
+
+        // Immutable financial ledger: silent edits forbidden; use REVERSAL entries.
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+
+      match /debts/{debtId} {
+        allow get: if isOwner(userId) && isValidId(debtId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(debtId) &&
+                         incoming().keys().hasAll(['userId', 'counterparty', 'direction', 'principalMinor', 'remainingMinor', 'currency', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'counterparty', 'direction', 'principalMinor', 'remainingMinor', 'currency', 'notes', 'dueAtMillis', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidDebt(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(debtId) &&
+                         isValidDebt(incoming(), userId) &&
+                         existing().status != 'SETTLED' &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().principalMinor == existing().principalMinor &&
+                         incoming().direction == existing().direction &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['remainingMinor', 'status', 'notes', 'dueAtMillis', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(debtId);
+      }
+
+      match /debt_payments/{paymentId} {
+        allow get: if isOwner(userId) && isValidId(paymentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(paymentId) &&
+                         incoming().keys().hasAll(['userId', 'debtId', 'amountMinor', 'currency', 'paidAtMillis', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'debtId', 'amountMinor', 'currency', 'notes', 'paidAtMillis', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidDebtPayment(incoming(), userId) &&
+                         exists(/databases/$(database)/documents/users/$(userId)/debts/$(incoming().debtId));
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(paymentId);
+      }
+
+      match /ai_messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         incoming().keys().hasAll(['userId', 'sender', 'text', 'actionStatus', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'sender', 'text', 'intent', 'actionStatus', 'actionSummary', 'actionPayloadJson', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidAiMessage(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         isValidAiMessage(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['actionStatus', 'actionSummary', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+
+      match /audit_logs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll(['userId', 'action', 'entityType', 'entityId', 'summary', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'action', 'entityType', 'entityId', 'summary', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidAuditLog(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      match /support_tickets/{ticketId} {
+        allow get: if isOwner(userId) && isValidId(ticketId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(ticketId) &&
+                         incoming().keys().hasAll(['userId', 'subject', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'subject', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidSupportTicket(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(ticketId) &&
+                         isValidSupportTicket(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(ticketId);
+      }
+    }
+  }
+}

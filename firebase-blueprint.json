@@ -1,0 +1,249 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile, preferences, and app settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "preferredLanguage": { "type": "string", "enum": ["en", "bn"] },
+        "currency": { "type": "string" },
+        "themeMode": { "type": "string", "enum": ["SYSTEM", "LIGHT", "DARK"] },
+        "monthlyBudgetMinor": { "type": "integer" },
+        "biometricLockEnabled": { "type": "boolean" },
+        "subscriptionTier": { "type": "string", "enum": ["FREE", "PREMIUM"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "preferredLanguage",
+        "currency",
+        "themeMode",
+        "monthlyBudgetMinor",
+        "biometricLockEnabled",
+        "subscriptionTier",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MemoryItem": {
+      "title": "MemoryItem",
+      "description": "Personal memory, note, voice transcript, or document reference.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["PERSONAL", "WORK", "FINANCE", "HEALTH", "IDEA", "VOICE", "DOCUMENT"] },
+        "tags": { "type": "array" },
+        "pinned": { "type": "boolean" },
+        "sourceType": { "type": "string", "enum": ["NOTE", "MEMORY", "VOICE", "DOCUMENT"] },
+        "attachmentUri": { "type": "string" },
+        "eventDateMillis": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "title", "content", "category", "tags", "pinned", "sourceType", "createdAt", "updatedAt"]
+    },
+    "ReminderItem": {
+      "title": "ReminderItem",
+      "description": "Timezone-aware scheduled reminder with recurrence and delivery status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "notes": { "type": "string" },
+        "triggerAtMillis": { "type": "integer" },
+        "timezoneId": { "type": "string" },
+        "recurrence": { "type": "string", "enum": ["ONCE", "DAILY", "WEEKLY", "MONTHLY"] },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "SNOOZED", "MISSED"] },
+        "snoozedUntilMillis": { "type": "integer" },
+        "deliveryStatus": { "type": "string", "enum": ["SCHEDULED", "DELIVERED", "PERMISSION_DENIED", "SKIPPED"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "title", "triggerAtMillis", "timezoneId", "recurrence", "status", "deliveryStatus", "createdAt", "updatedAt"]
+    },
+    "TaskItem": {
+      "title": "TaskItem",
+      "description": "Personal to-do item with priority and optional due date.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "notes": { "type": "string" },
+        "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "completed": { "type": "boolean" },
+        "dueAtMillis": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "title", "priority", "completed", "createdAt", "updatedAt"]
+    },
+    "AccountItem": {
+      "title": "AccountItem",
+      "description": "Financial cash, bank, wallet, or card account storing balance in minor units.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "accountType": { "type": "string", "enum": ["CASH", "BANK", "WALLET", "CARD"] },
+        "currency": { "type": "string" },
+        "balanceMinor": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "name", "accountType", "currency", "balanceMinor", "createdAt", "updatedAt"]
+    },
+    "TransactionItem": {
+      "title": "TransactionItem",
+      "description": "Immutable financial transaction ledger entry in exact minor currency units.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "accountId": { "type": "string" },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE", "REVERSAL"] },
+        "amountMinor": { "type": "integer" },
+        "currency": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "occurredAtMillis": { "type": "integer" },
+        "reversedTransactionId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "accountId", "type", "amountMinor", "currency", "category", "description", "occurredAtMillis", "createdAt", "updatedAt"]
+    },
+    "DebtItem": {
+      "title": "DebtItem",
+      "description": "Receivable or payable loan record with remaining balance in minor units.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "counterparty": { "type": "string" },
+        "direction": { "type": "string", "enum": ["RECEIVABLE", "PAYABLE"] },
+        "principalMinor": { "type": "integer" },
+        "remainingMinor": { "type": "integer" },
+        "currency": { "type": "string" },
+        "notes": { "type": "string" },
+        "dueAtMillis": { "type": "integer" },
+        "status": { "type": "string", "enum": ["OPEN", "SETTLED"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "counterparty", "direction", "principalMinor", "remainingMinor", "currency", "status", "createdAt", "updatedAt"]
+    },
+    "DebtPaymentItem": {
+      "title": "DebtPaymentItem",
+      "description": "Immutable installment payment applied to a debt record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "debtId": { "type": "string" },
+        "amountMinor": { "type": "integer" },
+        "currency": { "type": "string" },
+        "notes": { "type": "string" },
+        "paidAtMillis": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "debtId", "amountMinor", "currency", "paidAtMillis", "createdAt", "updatedAt"]
+    },
+    "AiMessageItem": {
+      "title": "AiMessageItem",
+      "description": "AI Assistant conversation message with optional structured confirmation state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sender": { "type": "string", "enum": ["USER", "ASSISTANT"] },
+        "text": { "type": "string" },
+        "intent": { "type": "string" },
+        "actionStatus": { "type": "string", "enum": ["NONE", "PENDING_CONFIRMATION", "CONFIRMED", "CANCELLED"] },
+        "actionSummary": { "type": "string" },
+        "actionPayloadJson": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "sender", "text", "actionStatus", "createdAt", "updatedAt"]
+    },
+    "AuditLogItem": {
+      "title": "AuditLogItem",
+      "description": "Immutable audit trail entry for financial, security, and reminder events.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "summary": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "action", "entityType", "entityId", "summary", "createdAt", "updatedAt"]
+    },
+    "SupportTicketItem": {
+      "title": "SupportTicketItem",
+      "description": "User help and support request submitted from the app.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "RESOLVED"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "subject", "message", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and settings document."
+    },
+    "/users/{userId}/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/MemoryItem" },
+      "description": "Personal memories, notes, voice transcripts, and document references."
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/ReminderItem" },
+      "description": "Scheduled user reminders."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/TaskItem" },
+      "description": "User to-do tasks."
+    },
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/AccountItem" },
+      "description": "Personal accounting accounts."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/TransactionItem" },
+      "description": "Immutable financial transaction ledger."
+    },
+    "/users/{userId}/debts/{debtId}": {
+      "schema": { "$ref": "#/entities/DebtItem" },
+      "description": "Loans given and received."
+    },
+    "/users/{userId}/debt_payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/DebtPaymentItem" },
+      "description": "Immutable debt payment history."
+    },
+    "/users/{userId}/ai_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/AiMessageItem" },
+      "description": "AI assistant chat messages."
+    },
+    "/users/{userId}/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLogItem" },
+      "description": "Immutable audit logs."
+    },
+    "/users/{userId}/support_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicketItem" },
+      "description": "Support tickets submitted by the user."
+    }
+  }
+}
